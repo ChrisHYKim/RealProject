@@ -4,7 +4,8 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from dotenv import load_dotenv
-from ELTProcess.dataProcess import DataProcess
+from ETLProcess.Data import Data
+from ETLProcess.AnalyticsML import Analytics
 import os
 import json
 
@@ -38,36 +39,25 @@ async def loadData(ws: WebSocket):
             receiveData = json.loads(data)
             search_querys = receiveData["query"]
             year_data = receiveData["year"]
-            if search_querys is not None:
+            if year_data is not None:
                 load_dotenv()
                 get_url = os.getenv("OPENAPI_URL")
                 openkeys = os.getenv("OPENAPI_KEY")
                 openUrl = (
                     f"{get_url}{openkeys}/xml/tbLnOpendataRtmsV/1/1000/{year_data}"
                 )
-                elt_process = DataProcess(openUrl, year_data, search_querys)
-                result_http = await elt_process.process_req()
-                if result_http:
-                    # Snowflake 스토리지와 DB 저장
-                    elt_process.process_Data(result_http)
-                    ml_json = elt_process.realEateModel()
-                    # print(ml_json)
-                    await ws.send_text(ml_json)
-            else:
-                load_dotenv()
-                get_url = os.getenv("OPENAPI_URL")
-                openkeys = os.getenv("OPENAPI_KEY")
-                openUrl = (
-                    f"{get_url}{openkeys}/xml/tbLnOpendataRtmsV/1/1000/{year_data}"
-                )
-                elt_process = DataProcess(openUrl, year_data, None)
-                result_http = await elt_process.process_req()
-                if result_http:
-                    # Snowflake 스토리지와 DB 저장
-                    elt_process.process_Data(result_http)
-                    ml_json = elt_process.realEateModel()
-                    # print(ml_json)
-                    await ws.send_text(ml_json)
+                # 데이터 전처리 진행
+                elt_process = Data(openUrl, year_data)
+                result_http = await elt_process.fetchData()
+                parequest = elt_process.process_Data(result_http)
+                # 분석 진행
+                analtity = Analytics(parequest)
+                df = analtity.loadPreq()
+                df_data = analtity.vectorProc(df)
+                ml_json = analtity.trainModel(df_data)
+                # print(ml_json)
+                # print(ml_json)
+                await ws.send_text(ml_json)
     except WebSocketDisconnect:
         print("연결 종료")
         try:

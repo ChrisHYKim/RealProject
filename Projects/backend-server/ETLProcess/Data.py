@@ -9,14 +9,14 @@ from pyspark.sql.types import (
     IntegerType,
     FloatType,
 )
+import asyncio
 import os
 
 
-class Data:
-    def __init__(self, getUrl, years):
-        self.getUrl = getUrl
-        self.getYear = years
-
+class DataProcess:
+    def __init__(self, year, urlOpen):
+        self.year = year
+        self.urlOpen = urlOpen
         # shuffle partitions 개수 설정
         self.spark = (
             SparkSession.Builder()
@@ -29,14 +29,17 @@ class Data:
     # Sprak Session 구성
     async def fetchData(self):
         async with aiohttp.ClientSession() as session:
-            async with session.get(self.getUrl) as rep:
+            async with session.get(self.urlOpen) as rep:
                 if rep.status == 200:
                     xml_data = await rep.text()
                     return xml_data
                 else:
                     print("request err")
 
-    def process_Data(self, xml_data):
+    # def process_Data(self):
+    #     asyncio.run()
+
+    def save_to_parequst(self, xml_data):
         try:
             # xml to dict convert
             dict_data = xmltodict.parse(xml_data)
@@ -122,10 +125,11 @@ class Data:
             df_unique = df_clean.dropDuplicates(["BLDG_NM", "CTRT_DAY"])
             df_flr = df_unique.filter(F.col("FLR") != -1)
             output_dir = "Projects/backend-server/ETLProcess/data"
+
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
             output_path = os.path.join(
-                output_dir, f"year={self.getYear}/realEstate_data.parquet"
+                output_dir, f"year={self.year}/realEstate_data.parquet"
             )
             df_flr.repartition(1).write.mode("overwrite").partitionBy(
                 "RCPT_YR", "CGG_NM"

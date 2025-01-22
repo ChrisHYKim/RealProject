@@ -2,15 +2,13 @@
 from pyspark.sql import SparkSession
 from pyspark.ml.feature import VectorAssembler
 from pyspark.ml.regression import LinearRegression
-from pyspark import SparkConf, SparkContext
 from pyspark.sql.types import IntegerType
-
+from airflow.models import Variable
 import json
 
 
 class Analytics:
-    def __init__(self, pareq_path):
-        self.pareq_path = pareq_path
+    def __init__(self):
         MAX_MEMORY = "5G"
         self.spark = (
             SparkSession.Builder()
@@ -20,10 +18,16 @@ class Analytics:
             .config("spark.driver.memory", MAX_MEMORY)
             .getOrCreate()
         )
+        load_data = self.loadPreq()
+        df = self.vectorProc(load_data)
+        self.trainModel(df)
 
     def loadPreq(self):
+        pareq_path = Variable.get(
+            "output_path",
+        )
         # 1. 기존 데이터 로드
-        df = self.spark.read.parquet(self.pareq_path)
+        df = self.spark.read.parquet(pareq_path)
         df.show()
         return df
 
@@ -60,7 +64,7 @@ class Analytics:
                     for row in result_data
                 ]
             )
-            return ml_json
+            Variable.set("ml_json", ml_json)
         except Exception as modelErr:
             print("model err", modelErr)
         finally:

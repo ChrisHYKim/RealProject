@@ -21,7 +21,7 @@
     "/": Home,
   };
   onMount(() => {
-    socket = new WebSocket("ws://127.0.0.1:8000/ws");
+    socket = new WebSocket("ws://127.0.0.1:8001");
     // websocket 연결
     socket.addEventListener("open", () => {
       console.log("연결 성공");

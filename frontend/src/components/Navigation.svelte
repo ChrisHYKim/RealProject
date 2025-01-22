@@ -14,7 +14,7 @@
 <!-- navbar 생성 -->
 <nav class="navbar navbar-expand-lg navbar-light bg-light border-bottom">
     <div class="container-fluid">
-        <a use:link class="navbar-brand" href="/main">RealEate</a>
+        <a use:link class="navbar-brand" href="/">RealEate</a>
         <button
             class="navbar-toggler"
             type="button"

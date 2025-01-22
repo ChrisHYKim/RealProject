@@ -9,22 +9,20 @@ from pyspark.sql.types import (
     IntegerType,
     FloatType,
 )
-import asyncio
+from airflow.models import Variable
 import os
+import asyncio
 
 
 class DataProcess:
-    def __init__(self, year, urlOpen):
-        self.year = year
-        self.urlOpen = urlOpen
-        # shuffle partitions 개수 설정
-        self.spark = (
-            SparkSession.Builder()
-            .appName("ReadDataProcess")
-            .config("spark.sql.shuffle.partitions", "200")
-            .config("spark.executor.memory", "4g")
-            .getOrCreate()
-        )
+    def __init__(self):
+        self.year = Variable.get("years")
+        self.urlOpen = Variable.get("open_url")
+        self.run()
+
+    def run(self):
+        xml_data = asyncio.run(self.fetchData())
+        self.save_to_parequst(xml_data)
 
     # Sprak Session 구성
     async def fetchData(self):
@@ -35,9 +33,6 @@ class DataProcess:
                     return xml_data
                 else:
                     print("request err")
-
-    # def process_Data(self):
-    #     asyncio.run()
 
     def save_to_parequst(self, xml_data):
         try:
@@ -93,7 +88,15 @@ class DataProcess:
                     # StructField("OPBIZ_RESTAGNT_SGG_NM", StringType(), True)
                 ]
             )
-            df = self.spark.createDataFrame(rows, schema)
+            # shuffle partitions 개수 설정
+            spark = (
+                SparkSession.Builder()
+                .appName("ReadDataProcess")
+                .config("spark.sql.shuffle.partitions", "200")
+                .config("spark.executor.memory", "4g")
+                .getOrCreate()
+            )
+            df = spark.createDataFrame(rows, schema)
             # 메모리 적재
             df_cache = df.cache()
 
@@ -134,11 +137,9 @@ class DataProcess:
             df_flr.repartition(1).write.mode("overwrite").partitionBy(
                 "RCPT_YR", "CGG_NM"
             ).parquet(output_path)
-            # output path 반환
-            return output_path
-
+            Variable.set("output_path", output_path)
         except Exception as proErr:
             print(proErr)
         finally:
             df_flr.unpersist()
-            self.spark.stop()
+            spark.stop()

@@ -11,8 +11,7 @@ import uvicorn.config
 from websockets import serve
 import asyncio
 import uvicorn
-from ETLProcess.Data import DataProcess
-from ETLProcess.AnalyticsML import Analytics
+from airflow.models import Variable
 
 # BackEnd WebServer 구성
 
@@ -40,25 +39,6 @@ async def mainPage():
     return FileResponse("frontend/dist/index.html")
 
 
-# Airflow load DAG Trigger
-def trigger_airflow_dag(year_data, query, openUrl: str):
-    # if logins:
-    trigger_url = "https://localhost:8081/api/v1/dags/spark-process-dag/dagRuns"
-
-    headers = {
-        "Content-Type": "application/json",
-    }
-    payload = {"conf": {"year_data": year_data, "query": query, "openUrl": openUrl}}
-    #  headers=headers
-    rep = requests.post(trigger_url, json=payload, headers=headers, verify=False)
-    if rep.status_code == 200:
-        print(rep.text)
-        print("airflow success")
-    else:
-        print(rep.text)
-        print("airflow falild")
-
-
 async def conenctWS(websocket):
     try:
         async for message in websocket:
@@ -69,24 +49,28 @@ async def conenctWS(websocket):
             get_url = os.getenv("OPENAPI_URL")
             openkeys = os.getenv("OPENAPI_KEY")
             openUrl = f"{get_url}{openkeys}/xml/tbLnOpendataRtmsV/1/1000/{year_data}"
+            if build_name is not None:
+                Variable.set("build_names", build_name)
+            else:
+                # airflow model 에 저장한다.
+                Variable.set("years", year_data)
+                Variable.set("open_url", openUrl)
 
-            trigger_airflow_dag(year_data, build_name, openUrl)
-            # dp = DataProcess(year_data, openUrl)
-            # process_data = await dp.fetchData()
-            # outpath = dp.save_to_parequst(process_data)
-
-            # await websocket.send(ml_json)
-            # trigger_airflow_dag(year_data, build_name, )
+                # ml_json = Variable.get("ml_json", deserialize_json=True)
+                # if ml_json is not None:
+                #     await websocket.send(ml_json)
     except Exception as e:
         print(e)
 
 
+# WebSocket connect
 async def start_ws_connect():
 
     async with serve(conenctWS, "localhost", 8001):
         await asyncio.Future()
 
 
+# FASTAPI 호출
 async def start_webFast():
     config = uvicorn.Config(app, host="localhost", port=8000, log_level="info")
     server = uvicorn.Server(config)

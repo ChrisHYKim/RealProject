@@ -56,9 +56,9 @@ async def conenctWS(websocket):
                 Variable.set("years", year_data)
                 Variable.set("open_url", openUrl)
 
-                # ml_json = Variable.get("ml_json", deserialize_json=True)
-                # if ml_json is not None:
-                #     await websocket.send(ml_json)
+                ml_json = Variable.get("ml_json")
+                if ml_json is not None:
+                    await websocket.send(ml_json)
     except Exception as e:
         print(e)
 

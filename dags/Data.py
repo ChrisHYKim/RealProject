@@ -15,14 +15,9 @@ import asyncio
 
 
 class DataProcess:
-    def __init__(self):
-        self.year = Variable.get("years")
-        self.urlOpen = Variable.get("open_url")
-        self.run()
-
-    def run(self):
-        xml_data = asyncio.run(self.fetchData())
-        self.save_to_parequst(xml_data)
+    def __init__(self, year, urlOpen):
+        self.year = year
+        self.urlOpen = urlOpen
 
     # Sprak Session 구성
     async def fetchData(self):
@@ -127,7 +122,7 @@ class DataProcess:
             # 중복되는 데이터 제거
             df_unique = df_clean.dropDuplicates(["BLDG_NM", "CTRT_DAY"])
             df_flr = df_unique.filter(F.col("FLR") != -1)
-            output_dir = "Projects/backend-server/ETLProcess/data"
+            output_dir = "dags/data"
 
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)

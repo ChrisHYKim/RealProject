@@ -18,9 +18,6 @@ class Analytics:
             .config("spark.driver.memory", MAX_MEMORY)
             .getOrCreate()
         )
-        load_data = self.loadPreq()
-        df = self.vectorProc(load_data)
-        self.trainModel(df)
 
     def loadPreq(self):
         pareq_path = Variable.get(

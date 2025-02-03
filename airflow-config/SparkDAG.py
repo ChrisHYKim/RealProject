@@ -1,9 +1,7 @@
 from airflow import DAG
-from airflow.decorators import task
 from datetime import datetime, timedelta
 from airflow.operators.python import PythonOperator
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from preData import process
+from preData import process_data_task
 
 default_args = {"start_date": datetime.today().strftime("%Y-%m-%d")}
 
@@ -15,5 +13,11 @@ with DAG(
     default_args=default_args,
     catchup=False,
 ) as dag:
-    preprocess = PythonOperator(task_id="preprocess_data", python_callable=process)
+    preprocess = PythonOperator(
+        task_id="preprocess_data", python_callable=process_data_task
+    )
+    # 데이터 전처리 >> 데이터 저장
     preprocess
+    # 예측 모델 분석 >> 분석 데이터 저장
+
+    # 분석 데이터 시각화 진행
